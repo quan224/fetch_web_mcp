@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三角洲行动 - 子弹实时价格</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0f1923;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+header {
+  background: linear-gradient(135deg, #1a2a3a 0%, #0f1923 100%);
+  padding: 24px 32px;
+  border-bottom: 1px solid #2a3a4a;
+}
+header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+}
+header .meta {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #8899aa;
+}
+header .meta span { margin-right: 16px; }
+.stats {
+  display: flex;
+  gap: 16px;
+  padding: 16px 32px;
+  background: #1a2a3a;
+  border-bottom: 1px solid #2a3a4a;
+}
+.stat-card {
+  flex: 1;
+  background: #0f1923;
+  border: 1px solid #2a3a4a;
+  border-radius: 8px;
+  padding: 14px 18px;
+}
+.stat-card .label { font-size: 12px; color: #8899aa; }
+.stat-card .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+.stat-card .value.up { color: #00c853; }
+.stat-card .value.down { color: #ff5252; }
+.stat-card .value.neutral { color: #ffd740; }
+.toolbar {
+  display: flex;
+  gap: 12px;
+  padding: 12px 32px;
+  align-items: center;
+  background: #152028;
+  border-bottom: 1px solid #2a3a4a;
+}
+.toolbar input {
+  flex: 1;
+  padding: 8px 14px;
+  border: 1px solid #2a3a4a;
+  border-radius: 6px;
+  background: #0f1923;
+  color: #e0e0e0;
+  font-size: 14px;
+  outline: none;
+}
+.toolbar input:focus { border-color: #4fc3f7; }
+.toolbar select {
+  padding: 8px 12px;
+  border: 1px solid #2a3a4a;
+  border-radius: 6px;
+  background: #0f1923;
+  color: #e0e0e0;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+}
+.toolbar select:focus { border-color: #4fc3f7; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+thead th {
+  position: sticky;
+  top: 0;
+  background: #1a2a3a;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8899aa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #2a3a4a;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+thead th:hover { color: #4fc3f7; }
+thead th .arrow { margin-left: 4px; font-size: 11px; }
+tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #1a2a3a;
+  font-size: 14px;
+  white-space: nowrap;
+}
+tbody tr:hover { background: #1a2a3a; }
+tbody tr:nth-child(even) { background: #121d27; }
+tbody tr:nth-child(even):hover { background: #1a2a3a; }
+.price { font-weight: 600; font-variant-numeric: tabular-nums; }
+.change {
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.change.up { color: #00c853; background: rgba(0,200,83,0.1); }
+.change.down { color: #ff5252; background: rgba(255,82,82,0.1); }
+.change.zero { color: #8899aa; background: rgba(136,153,170,0.1); }
+.name-cell { font-weight: 500; color: #fff; }
+.gs-cell { color: #ffd740; }
+footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 12px;
+  color: #556677;
+  border-top: 1px solid #2a3a4a;
+}
+footer a { color: #4fc3f7; text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #8899aa;
+  font-size: 16px;
+}
+.top-sections {
+  display: flex;
+  gap: 16px;
+  padding: 16px 32px;
+  background: #1a2a3a;
+  border-bottom: 1px solid #2a3a4a;
+}
+.top-section {
+  flex: 1;
+  background: #0f1923;
+  border: 1px solid #2a3a4a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.top-section .section-title {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  border-bottom: 1px solid #2a3a4a;
+}
+.top-section .section-title.up { color: #00c853; background: rgba(0,200,83,0.05); }
+.top-section .section-title.down { color: #ff5252; background: rgba(255,82,82,0.05); }
+.top-section .section-title.price-top { color: #ffd740; background: rgba(255,215,64,0.05); }
+.top-section .top-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid #1a2a3a;
+  font-size: 13px;
+}
+.top-section .top-item:last-child { border-bottom: none; }
+.top-section .top-item .rank {
+  width: 20px;
+  font-weight: 700;
+  font-size: 12px;
+  margin-right: 8px;
+}
+.top-section .top-item .rank.r1 { color: #ffd740; }
+.top-section .top-item .rank.r2 { color: #b0bec5; }
+.top-section .top-item .rank.r3 { color: #ff8a65; }
+.top-section .top-item .rank.r4,
+.top-section .top-item .rank.r5 { color: #8899aa; }
+.top-section .top-item .item-name { flex: 1; color: #e0e0e0; font-weight: 500; }
+.top-section .top-item .item-grade { font-size: 12px; font-weight: 700; margin-right: 6px; }
+.top-section .top-item .item-grade.g5 { color: #ffd740; }
+.top-section .top-item .item-grade.g4 { color: #ce93d8; }
+.top-section .top-item .item-grade.g3 { color: #4fc3f7; }
+.top-section .top-item .item-grade.g2 { color: #66bb6a; }
+.top-section .top-item .item-grade.g1 { color: #e0e0e0; }
+.top-section .top-item .item-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+.top-section .top-item .item-value.up { color: #00c853; }
+.top-section .top-item .item-value.down { color: #ff5252; }
+.top-section .top-item .item-value.price-val { color: #ffd740; }
+.chart-section {
+  padding: 16px 32px;
+  background: #1a2a3a;
+  border-bottom: 1px solid #2a3a4a;
+}
+.chart-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.chart-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-right: 8px;
+}
+.chart-header .grade-btns { display: flex; gap: 6px; }
+.chart-header .grade-btns button {
+  padding: 4px 12px;
+  border: 1px solid #2a3a4a;
+  border-radius: 4px;
+  background: #0f1923;
+  color: #8899aa;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.chart-header .grade-btns button:hover { border-color: #4fc3f7; color: #4fc3f7; }
+.chart-header .grade-btns button.active { background: #4fc3f7; color: #0f1923; border-color: #4fc3f7; font-weight: 600; }
+.chart-header .chart-search {
+  padding: 5px 12px;
+  border: 1px solid #2a3a4a;
+  border-radius: 4px;
+  background: #0f1923;
+  color: #e0e0e0;
+  font-size: 13px;
+  outline: none;
+  width: 180px;
+}
+.chart-header .chart-search:focus { border-color: #4fc3f7; }
+.chart-container {
+  background: #0f1923;
+  border: 1px solid #2a3a4a;
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+  height: 420px;
+}
+.chart-container canvas { width: 100% !important; }
+.chart-empty {
+  text-align: center;
+  color: #8899aa;
+  padding: 60px;
+  font-size: 15px;
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>三角洲行动 - 子弹实时价格</h1>
+  <div class="meta">
+    <span>数据来源：<a href="https://orzice.com/v/ammo" style="color:#4fc3f7">orzice.com</a></span>
+    <span>更新时间：<span id="updateTime">-</span></span>
+    <span>共 <span id="totalCount">0</span> 种</span>
+  </div>
+</header>
+<div class="stats">
+  <div class="stat-card">
+    <div class="label">上涨</div>
+    <div class="value up" id="upCount">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">下跌</div>
+    <div class="value down" id="downCount">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">持平</div>
+    <div class="value neutral" id="neutralCount">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">最高涨幅</div>
+    <div class="value up" id="maxChange">-</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">最大跌幅</div>
+    <div class="value down" id="minChange">-</div>
+  </div>
+</div>
+<div class="top-sections">
+  <div class="top-section">
+    <div class="section-title up">涨幅 TOP 5</div>
+    <div id="topUp"></div>
+  </div>
+  <div class="top-section">
+    <div class="section-title down">跌幅 TOP 5</div>
+    <div id="topDown"></div>
+  </div>
+  <div class="top-section">
+    <div class="section-title price-top">价格 TOP 5</div>
+    <div id="topPrice"></div>
+  </div>
+</div>
+<div class="chart-section">
+  <div class="chart-header">
+    <h3>价格走势（3级以上）</h3>
+    <div class="grade-btns">
+      <button class="active" data-grade="0">全部</button>
+      <button data-grade="5">5级</button>
+      <button data-grade="4">4级</button>
+      <button data-grade="3">3级</button>
+    </div>
+    <input type="text" class="chart-search" id="chartSearch" placeholder="搜索子弹名称..." />
+  </div>
+  <div class="chart-container">
+    <canvas id="priceChart"></canvas>
+    <div id="chartEmpty" class="chart-empty" style="display:none">暂无历史数据，等待定时采集积累...</div>
+  </div>
+</div>
+<div class="toolbar">
+  <input type="text" id="searchInput" placeholder="搜索子弹名称..." />
+  <select id="filterChange">
+    <option value="all">全部</option>
+    <option value="up">上涨</option>
+    <option value="down">下跌</option>
+    <option value="zero">持平</option>
+  </select>
+  <select id="filterGrade">
+    <option value="0">全部等级</option>
+    <option value="5">5级</option>
+    <option value="4">4级</option>
+    <option value="3">3级</option>
+    <option value="2">2级</option>
+    <option value="1">1级</option>
+  </select>
+  <select id="sortBy">
+    <option value="todayChange_desc">涨幅 (高→低)</option>
+    <option value="todayChange_asc">涨幅 (低→高)</option>
+    <option value="currentPrice_desc">当前价格 (高→低)</option>
+    <option value="currentPrice_asc">当前价格 (低→高)</option>
+    <option value="goldStandard_desc">金本位 (高→低)</option>
+    <option value="goldStandard_asc">金本位 (低→高)</option>
+    <option value="name_asc">名称 A→Z</option>
+    <option value="grade_desc">等级 (高→低)</option>
+    <option value="grade_asc">等级 (低→高)</option>
+  </select>
+</div>
+<div style="overflow-x:auto;">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:50px">#</th>
+        <th>名称</th>
+        <th>等级</th>
+        <th>金本位 <span style="font-size:11px;color:#667">(30发)</span></th>
+        <th>单价</th>
+        <th>当前价格</th>
+        <th>今日涨幅</th>
+      </tr>
+    </thead>
+    <tbody id="ammoTable"></tbody>
+  </table>
+</div>
+<footer>
+  数据来源于 <a href="https://orzice.com/v/ammo" target="_blank">冰尘网 Orzice</a> 仅供参考
+</footer>
+
+<script>
+const DATA = {"meta":{"title":"三角洲行动 - 子弹实时价格","source":"https://orzice.com/v/ammo","updateTime":"2026-05-04 19:35","total":88},"ammo":[{"name":"碳纤维散射箭矢","grade":5,"goldStandard":1.73,"goldStandardPer":0.58,"currentPrice":3366,"todayChange":3.86},{"name":"12.7x55mm PS12B","grade":5,"goldStandard":2.74,"goldStandardPer":0.91,"currentPrice":5323,"todayChange":3.5},{"name":"碳纤维穿甲箭矢","grade":5,"goldStandard":2.61,"goldStandardPer":0.87,"currentPrice":5069,"todayChange":2.94},{"name":".50 AE AP","grade":5,"goldStandard":2.47,"goldStandardPer":0.82,"currentPrice":4793,"todayChange":1.59},{"name":"4.6x30mm AP SX","grade":5,"goldStandard":2.06,"goldStandardPer":0.68,"currentPrice":3997,"todayChange":1.4},{"name":"7.62x39mm SUB_5","grade":5,"goldStandard":0,"goldStandardPer":0,"currentPrice":0,"todayChange":0},{"name":"7.62x51mm M62","grade":5,"goldStandard":3.07,"goldStandardPer":1.02,"currentPrice":5967,"todayChange":0},{"name":"7.62x39mm AP","grade":5,"goldStandard":2.68,"goldStandardPer":0.89,"currentPrice":5196,"todayChange":0},{"name":"5.56x45mm M995","grade":5,"goldStandard":2.04,"goldStandardPer":0.68,"currentPrice":3952,"todayChange":0},{"name":"5.45x39mm BS","grade":5,"goldStandard":2.3,"goldStandardPer":0.76,"currentPrice":4474,"todayChange":0},{"name":"9x39mm BP","grade":5,"goldStandard":2.54,"goldStandardPer":0.84,"currentPrice":4939,"todayChange":-1.3},{"name":"6.8x51mm Hybrid","grade":5,"goldStandard":2.76,"goldStandardPer":0.92,"currentPrice":5359,"todayChange":-1.74},{"name":"7.62x54R BT","grade":5,"goldStandard":2.52,"goldStandardPer":0.84,"currentPrice":4894,"todayChange":-2.39},{"name":"45-70 Govt FTX","grade":5,"goldStandard":2.34,"goldStandardPer":0.77,"currentPrice":4535,"todayChange":-2.99},{"name":"5.8x42mm DVC12","grade":5,"goldStandard":2.07,"goldStandardPer":0.69,"currentPrice":4025,"todayChange":-3.36},{"name":".300BLK_5","grade":5,"goldStandard":2.44,"goldStandardPer":0.81,"currentPrice":4743,"todayChange":-4.53},{"name":"5.45x39mm BS ST+","grade":5,"goldStandard":3.28,"goldStandardPer":1.09,"currentPrice":6372,"todayChange":-5.7},{"name":"5.7x28mm SS190","grade":5,"goldStandard":2.15,"goldStandardPer":0.71,"currentPrice":4182,"todayChange":-5.85},{"name":"12 Gauge独头 AP-20","grade":4,"goldStandard":0.3,"goldStandardPer":0.1,"currentPrice":591,"todayChange":25.48},{"name":"45-70 Govt FMJ","grade":4,"goldStandard":0.62,"goldStandardPer":0.21,"currentPrice":1213,"todayChange":12},{"name":"碳纤维刺骨箭矢","grade":4,"goldStandard":0.88,"goldStandardPer":0.29,"currentPrice":1714,"todayChange":8.89},{"name":".357 Magnum FMJ","grade":4,"goldStandard":0.3,"goldStandardPer":0.1,"currentPrice":590,"todayChange":8.26},{"name":".50 AE FMJ","grade":4,"goldStandard":0.96,"goldStandardPer":0.32,"currentPrice":1865,"todayChange":5.07},{"name":"12.7x55mm PS12","grade":4,"goldStandard":0.91,"goldStandardPer":0.3,"currentPrice":1772,"todayChange":5.04},{"name":"12.7x55mm PD12双头弹","grade":4,"goldStandard":1.48,"goldStandardPer":0.49,"currentPrice":2867,"todayChange":3.61},{"name":"5.8x42mm DBP10","grade":4,"goldStandard":0.74,"goldStandardPer":0.24,"currentPrice":1428,"todayChange":2.51},{"name":"4.6x30mm FMJ SX","grade":4,"goldStandard":0.54,"goldStandardPer":0.18,"currentPrice":1045,"todayChange":2.45},{"name":"12 Gauge 龙息弹","grade":4,"goldStandard":1.05,"goldStandardPer":0.35,"currentPrice":2040,"todayChange":2},{"name":".300BLK SUB_4","grade":4,"goldStandard":0,"goldStandardPer":0,"currentPrice":0,"todayChange":0},{"name":"7.62x39mm SUB_4","grade":4,"goldStandard":0,"goldStandardPer":0,"currentPrice":0,"todayChange":0},{"name":"9x19mm PBP","grade":4,"goldStandard":0.56,"goldStandardPer":0.19,"currentPrice":1096,"todayChange":0},{"name":"7.62x54R LPS","grade":4,"goldStandard":0.87,"goldStandardPer":0.29,"currentPrice":1690,"todayChange":0},{"name":"7.62x39mm BP","grade":4,"goldStandard":0.63,"goldStandardPer":0.21,"currentPrice":1226,"todayChange":0},{"name":"6.8x51mm FMJ","grade":4,"goldStandard":0.88,"goldStandardPer":0.29,"currentPrice":1709,"todayChange":0},{"name":"5.56x45mm M855A1","grade":4,"goldStandard":0.57,"goldStandardPer":0.19,"currentPrice":1101,"todayChange":0},{"name":"5.45x39mm BT","grade":4,"goldStandard":0.63,"goldStandardPer":0.21,"currentPrice":1216,"todayChange":0},{"name":".45 ACP AP","grade":4,"goldStandard":0.69,"goldStandardPer":0.23,"currentPrice":1330,"todayChange":0},{"name":"5.56x45mm M855A1 APC+","grade":4,"goldStandard":0.91,"goldStandardPer":0.3,"currentPrice":1775,"todayChange":-1.39},{"name":"5.45x39mm BT ST","grade":4,"goldStandard":0.91,"goldStandardPer":0.3,"currentPrice":1772,"todayChange":-1.94},{"name":"9x39mm SP6","grade":4,"goldStandard":0.89,"goldStandardPer":0.29,"currentPrice":1721,"todayChange":-2.27},{"name":"7.62x51mm M80","grade":4,"goldStandard":0.65,"goldStandardPer":0.21,"currentPrice":1258,"todayChange":-3.08},{"name":"5.7x28mm SS193","grade":4,"goldStandard":0.91,"goldStandardPer":0.3,"currentPrice":1773,"todayChange":-3.27},{"name":".300BLK_4","grade":4,"goldStandard":1.0,"goldStandardPer":0.33,"currentPrice":1932,"todayChange":-3.5},{"name":"9x39mm SP5","grade":3,"goldStandard":0.3,"goldStandardPer":0.1,"currentPrice":584,"todayChange":25.86},{"name":"7.62x54R T46M","grade":3,"goldStandard":0.32,"goldStandardPer":0.11,"currentPrice":622,"todayChange":23.9},{"name":"5.56x45mm M855","grade":3,"goldStandard":0.22,"goldStandardPer":0.07,"currentPrice":421,"todayChange":21.68},{"name":"12.7x55mm PS12A","grade":3,"goldStandard":0.43,"goldStandardPer":0.14,"currentPrice":834,"todayChange":20.17},{"name":"7.62x39mm PS","grade":3,"goldStandard":0.3,"goldStandardPer":0.1,"currentPrice":581,"todayChange":18.33},{"name":"45-70 Govt RN","grade":3,"goldStandard":0.3,"goldStandardPer":0.1,"currentPrice":584,"todayChange":18.22},{"name":"9x19mm AP6.3","grade":3,"goldStandard":0.24,"goldStandardPer":0.08,"currentPrice":471,"todayChange":14.6},{"name":"玻纤柳叶箭矢","grade":3,"goldStandard":0.37,"goldStandardPer":0.12,"currentPrice":709,"todayChange":14.54},{"name":".50 AE JHP","grade":3,"goldStandard":0.38,"goldStandardPer":0.13,"currentPrice":744,"todayChange":12.05},{"name":"7.62x51mm BPZ","grade":3,"goldStandard":0.31,"goldStandardPer":0.1,"currentPrice":608,"todayChange":10.95},{"name":"5.45x39mm PS","grade":3,"goldStandard":0.28,"goldStandardPer":0.09,"currentPrice":534,"todayChange":9.2},{"name":".357 Magnum JHP","grade":3,"goldStandard":0.26,"goldStandardPer":0.09,"currentPrice":499,"todayChange":8.71},{"name":".300BLK_3","grade":3,"goldStandard":0.29,"goldStandardPer":0.1,"currentPrice":572,"todayChange":8.54},{"name":".45 ACP FMJ","grade":3,"goldStandard":0.31,"goldStandardPer":0.1,"currentPrice":596,"todayChange":8.17},{"name":"5.7x28mm L191","grade":3,"goldStandard":0.26,"goldStandardPer":0.08,"currentPrice":495,"todayChange":6.45},{"name":"12 Gauge 箭形弹","grade":3,"goldStandard":0.28,"goldStandardPer":0.09,"currentPrice":553,"todayChange":5.74},{"name":".357 Magnum 9号霰射\"鼠弹\"","grade":3,"goldStandard":0.14,"goldStandardPer":0.04,"currentPrice":263,"todayChange":3.95},{"name":"9x19mm RIP","grade":3,"goldStandard":0.34,"goldStandardPer":0.11,"currentPrice":668,"todayChange":3.09},{"name":"5.8x42mm DVP88","grade":3,"goldStandard":0.29,"goldStandardPer":0.1,"currentPrice":568,"todayChange":2.71},{"name":".300BLK SUB_3","grade":3,"goldStandard":0,"goldStandardPer":0,"currentPrice":0,"todayChange":0},{"name":"12 Gauge独头 FTX","grade":3,"goldStandard":0.27,"goldStandardPer":0.09,"currentPrice":519,"todayChange":0},{"name":".45 ACP RIP","grade":3,"goldStandard":0.38,"goldStandardPer":0.13,"currentPrice":740,"todayChange":0},{"name":"12 Gauge 8.5毫米鹿弹","grade":3,"goldStandard":0.2,"goldStandardPer":0.07,"currentPrice":383,"todayChange":-1.29},{"name":"5.7x28mm R37.F","grade":3,"goldStandard":0.28,"goldStandardPer":0.09,"currentPrice":547,"todayChange":-1.8},{"name":"5.56x45mm M855 APC","grade":3,"goldStandard":0.22,"goldStandardPer":0.07,"currentPrice":422,"todayChange":-6.64},{"name":"4.6x30mm Subsonic SX","grade":3,"goldStandard":0.2,"goldStandardPer":0.07,"currentPrice":387,"todayChange":-27.93},{"name":"9x19mm Pst","grade":2,"goldStandard":0.04,"goldStandardPer":0.01,"currentPrice":85,"todayChange":0},{"name":"7.62x51mm Ultra Nosler","grade":2,"goldStandard":0.06,"goldStandardPer":0.02,"currentPrice":119,"todayChange":0},{"name":"5.8x42mm DBP87","grade":2,"goldStandard":0.05,"goldStandardPer":0.02,"currentPrice":99,"todayChange":0},{"name":"5.7x28mm SS197SR","grade":2,"goldStandard":0.05,"goldStandardPer":0.02,"currentPrice":102,"todayChange":0},{"name":"5.56x45mm FMJ","grade":2,"goldStandard":0.04,"goldStandardPer":0.01,"currentPrice":80,"todayChange":0},{"name":"5.45x39mm T","grade":2,"goldStandard":0.05,"goldStandardPer":0.02,"currentPrice":100,"todayChange":0},{"name":"12 Gauge独头 RIP","grade":2,"goldStandard":0.07,"goldStandardPer":0.02,"currentPrice":133,"todayChange":0},{"name":"12 Gauge独头 GT","grade":2,"goldStandard":0.03,"goldStandardPer":0.01,"currentPrice":65,"todayChange":0},{"name":".50 AE HP","grade":2,"goldStandard":0.08,"goldStandardPer":0.03,"currentPrice":164,"todayChange":0},{"name":".45 ACP JHP","grade":2,"goldStandard":0.06,"goldStandardPer":0.02,"currentPrice":111,"todayChange":0},{"name":".357 Magnum HP","grade":2,"goldStandard":0.08,"goldStandardPer":0.03,"currentPrice":162,"todayChange":0},{"name":"7.62x39mm T45M","grade":2,"goldStandard":0.06,"goldStandardPer":0.02,"currentPrice":111,"todayChange":-7.5},{"name":"9x19mm PSO","grade":1,"goldStandard":0.02,"goldStandardPer":0.01,"currentPrice":32,"todayChange":0},{"name":"7.62x39mm LP","grade":1,"goldStandard":0.02,"goldStandardPer":0.01,"currentPrice":43,"todayChange":0},{"name":"5.7x28mm SS198LF","grade":1,"goldStandard":0.02,"goldStandardPer":0.01,"currentPrice":38,"todayChange":0},{"name":"5.56x45mm RRLP","grade":1,"goldStandard":0.02,"goldStandardPer":0.01,"currentPrice":35,"todayChange":0},{"name":"5.45x39mm PRS","grade":1,"goldStandard":0.02,"goldStandardPer":0.01,"currentPrice":40,"todayChange":0},{"name":"12 Gauge 7毫米鹿弹","grade":1,"goldStandard":0.01,"goldStandardPer":0,"currentPrice":28,"todayChange":0},{"name":".45 ACP HS","grade":1,"goldStandard":0.02,"goldStandardPer":0.01,"currentPrice":43,"todayChange":0}]};
+
+// 统计
+function updateStats(data) {
+  const up = data.filter(a => a.todayChange > 0).length;
+  const down = data.filter(a => a.todayChange < 0).length;
+  const neutral = data.filter(a => a.todayChange === 0).length;
+  const maxUp = data.reduce((m, a) => a.todayChange > m ? a.todayChange : m, -Infinity);
+  const maxDown = data.reduce((m, a) => a.todayChange < m ? a.todayChange : m, Infinity);
+  document.getElementById('upCount').textContent = up;
+  document.getElementById('downCount').textContent = down;
+  document.getElementById('neutralCount').textContent = neutral;
+  document.getElementById('maxChange').textContent = maxUp > 0 ? '+' + maxUp.toFixed(2) + '%' : '-';
+  document.getElementById('minChange').textContent = maxDown < 0 ? maxDown.toFixed(2) + '%' : '-';
+  document.getElementById('updateTime').textContent = DATA.meta.updateTime;
+  document.getElementById('totalCount').textContent = DATA.meta.total;
+}
+
+// 渲染TOP5分区
+function renderTop5(data) {
+  // 涨幅前5（排除todayChange=0）
+  const topUp = data.filter(a => a.todayChange > 0).sort((a, b) => b.todayChange - a.todayChange).slice(0, 5);
+  // 跌幅前5
+  const topDown = data.filter(a => a.todayChange < 0).sort((a, b) => a.todayChange - b.todayChange).slice(0, 5);
+  // 价格前5
+  const topPrice = data.filter(a => a.currentPrice > 0).sort((a, b) => b.currentPrice - a.currentPrice).slice(0, 5);
+
+  function renderItem(item, i, valueClass, valueText) {
+    const gradeColors = { 5: '#ffd740', 4: '#ce93d8', 3: '#4fc3f7', 2: '#66bb6a', 1: '#e0e0e0' };
+    const gc = gradeColors[item.grade] || '#e0e0e0';
+    return '<div class="top-item">' +
+      '<span class="rank r' + (i + 1) + '">' + (i + 1) + '</span>' +
+      '<span class="item-grade g' + item.grade + '">' + item.grade + '级</span>' +
+      '<span class="item-name" style="color:' + gc + '">' + item.name + '</span>' +
+      '<span class="item-value ' + valueClass + '">' + valueText + '</span>' +
+      '</div>';
+  }
+
+  document.getElementById('topUp').innerHTML = topUp.map((a, i) =>
+    renderItem(a, i, 'up', '+' + a.todayChange.toFixed(2) + '%')
+  ).join('');
+
+  document.getElementById('topDown').innerHTML = topDown.map((a, i) =>
+    renderItem(a, i, 'down', a.todayChange.toFixed(2) + '%')
+  ).join('');
+
+  document.getElementById('topPrice').innerHTML = topPrice.map((a, i) =>
+    renderItem(a, i, 'price-val', a.currentPrice.toLocaleString())
+  ).join('');
+}
+
+// 渲染表格
+function renderTable(data) {
+  const tbody = document.getElementById('ammoTable');
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="no-data">没有匹配的数据</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map((a, i) => {
+    const changeClass = a.todayChange > 0 ? 'up' : a.todayChange < 0 ? 'down' : 'zero';
+    const changeText = a.todayChange > 0 ? '+' + a.todayChange.toFixed(2) + '%' : a.todayChange < 0 ? a.todayChange.toFixed(2) + '%' : '0%';
+    const gradeColors = { 5: '#ffd740', 4: '#ce93d8', 3: '#4fc3f7', 2: '#66bb6a', 1: '#e0e0e0' };
+    const gradeColor = gradeColors[a.grade] || '#8899aa';
+    return '<tr>' +
+      '<td style="color:#556677">' + (i + 1) + '</td>' +
+      '<td class="name-cell" style="color:' + gradeColor + '">' + a.name + '</td>' +
+      '<td><span style="color:' + gradeColor + ';font-weight:700;font-size:13px">' + a.grade + '级</span></td>' +
+      '<td class="gs-cell price">' + a.goldStandard.toFixed(2) + '</td>' +
+      '<td class="gs-cell">' + a.goldStandardPer.toFixed(2) + '</td>' +
+      '<td class="price">' + a.currentPrice.toLocaleString() + '</td>' +
+      '<td><span class="change ' + changeClass + '">' + changeText + '</span></td>' +
+      '</tr>';
+  }).join('');
+}
+
+// 筛选排序
+function filterAndSort() {
+  const keyword = document.getElementById('searchInput').value.toLowerCase();
+  const filter = document.getElementById('filterChange').value;
+  const grade = parseInt(document.getElementById('filterGrade').value);
+  const sortVal = document.getElementById('sortBy').value;
+
+  let list = DATA.ammo.slice();
+
+  // 搜索
+  if (keyword) {
+    list = list.filter(a => a.name.toLowerCase().includes(keyword));
+  }
+
+  // 筛选涨跌
+  if (filter === 'up') list = list.filter(a => a.todayChange > 0);
+  else if (filter === 'down') list = list.filter(a => a.todayChange < 0);
+  else if (filter === 'zero') list = list.filter(a => a.todayChange === 0);
+
+  // 筛选等级
+  if (grade > 0) list = list.filter(a => a.grade === grade);
+
+  // 排序
+  const [field, order] = sortVal.split('_');
+  list.sort((a, b) => {
+    let va = a[field], vb = b[field];
+    if (field === 'name') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return order === 'asc' ? -1 : 1;
+    if (va > vb) return order === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  renderTable(list);
+}
+
+// 事件绑定
+document.getElementById('searchInput').addEventListener('input', filterAndSort);
+document.getElementById('filterChange').addEventListener('change', filterAndSort);
+document.getElementById('filterGrade').addEventListener('change', filterAndSort);
+document.getElementById('sortBy').addEventListener('change', filterAndSort);
+
+// 初始化
+updateStats(DATA.ammo);
+renderTop5(DATA.ammo);
+filterAndSort();
+
+// ========== 价格走势折线图 ==========
+const HISTORY = {"timePoints":["05-04 14:17","05-04 19:35"],"series":[{"name":".300BLK_5","grade":5,"prices":[4968,4743]},{"name":".50 AE AP","grade":5,"prices":[4943,4793]},{"name":"12.7x55mm PS12B","grade":5,"prices":[5323,5323]},{"name":"4.6x30mm AP SX","grade":5,"prices":[4052,3997]},{"name":"45-70 Govt FTX","grade":5,"prices":[4535,4535]},{"name":"5.45x39mm BS","grade":5,"prices":[4529,4474]},{"name":"5.45x39mm BS ST+","grade":5,"prices":[6317,6372]},{"name":"5.56x45mm M995","grade":5,"prices":[3952,3952]},{"name":"5.7x28mm SS190","grade":5,"prices":[null,4182]},{"name":"5.8x42mm DVC12","grade":5,"prices":[4025,4025]},{"name":"6.8x51mm Hybrid","grade":5,"prices":[5454,5359]},{"name":"7.62x39mm AP","grade":5,"prices":[5271,5196]},{"name":"7.62x51mm M62","grade":5,"prices":[5967,5967]},{"name":"7.62x54R BT","grade":5,"prices":[4894,4894]},{"name":"9x39mm BP","grade":5,"prices":[5004,4939]},{"name":"碳纤维散射箭矢","grade":5,"prices":[3366,3366]},{"name":"碳纤维穿甲箭矢","grade":5,"prices":[5214,5069]},{"name":".300BLK_4","grade":4,"prices":[1897,1932]},{"name":".357 Magnum FMJ","grade":4,"prices":[590,590]},{"name":".45 ACP AP","grade":4,"prices":[1365,1330]},{"name":".50 AE FMJ","grade":4,"prices":[1910,1865]},{"name":"12 Gauge 龙息弹","grade":4,"prices":[2080,2040]},{"name":"12 Gauge独头 AP-20","grade":4,"prices":[591,591]},{"name":"12.7x55mm PD12双头弹","grade":4,"prices":[2867,2867]},{"name":"12.7x55mm PS12","grade":4,"prices":[1857,1772]},{"name":"4.6x30mm FMJ SX","grade":4,"prices":[1095,1045]},{"name":"45-70 Govt FMJ","grade":4,"prices":[1213,1213]},{"name":"5.45x39mm BT","grade":4,"prices":[1216,1216]},{"name":"5.45x39mm BT ST","grade":4,"prices":[1737,1772]},{"name":"5.56x45mm M855A1","grade":4,"prices":[1101,1101]},{"name":"5.56x45mm M855A1 APC+","grade":4,"prices":[1700,1775]},{"name":"5.7x28mm SS193","grade":4,"prices":[1713,1773]},{"name":"5.8x42mm DBP10","grade":4,"prices":[1428,1428]},{"name":"6.8x51mm FMJ","grade":4,"prices":[1754,1709]},{"name":"7.62x39mm BP","grade":4,"prices":[1226,1226]},{"name":"7.62x51mm M80","grade":4,"prices":[1298,1258]},{"name":"7.62x54R LPS","grade":4,"prices":[1730,1690]},{"name":"9x19mm PBP","grade":4,"prices":[1126,1096]},{"name":"9x39mm SP6","grade":4,"prices":[1881,1721]},{"name":"碳纤维刺骨箭矢","grade":4,"prices":[1854,1714]},{"name":".300BLK_3","grade":3,"prices":[572,572]},{"name":".357 Magnum 9号霰射\"鼠弹\"","grade":3,"prices":[248,263]},{"name":".357 Magnum JHP","grade":3,"prices":[519,499]},{"name":".45 ACP FMJ","grade":3,"prices":[581,596]},{"name":".45 ACP RIP","grade":3,"prices":[740,740]},{"name":".50 AE JHP","grade":3,"prices":[804,744]},{"name":"12 Gauge 8.5毫米鹿弹","grade":3,"prices":[383,383]},{"name":"12 Gauge 箭形弹","grade":3,"prices":[538,553]},{"name":"12 Gauge独头 FTX","grade":3,"prices":[519,519]},{"name":"12.7x55mm PS12A","grade":3,"prices":[834,834]},{"name":"4.6x30mm Subsonic SX","grade":3,"prices":[387,387]},{"name":"45-70 Govt RN","grade":3,"prices":[584,584]},{"name":"5.45x39mm PS","grade":3,"prices":[519,534]},{"name":"5.56x45mm M855","grade":3,"prices":[406,421]},{"name":"5.56x45mm M855 APC","grade":3,"prices":[412,422]},{"name":"5.7x28mm L191","grade":3,"prices":[510,495]},{"name":"5.7x28mm R37.F","grade":3,"prices":[547,547]},{"name":"5.8x42mm DVP88","grade":3,"prices":[553,568]},{"name":"7.62x39mm PS","grade":3,"prices":[566,581]},{"name":"7.62x51mm BPZ","grade":3,"prices":[628,608]},{"name":"7.62x54R T46M","grade":3,"prices":[622,622]},{"name":"9x19mm AP6.3","grade":3,"prices":[471,471]},{"name":"9x19mm RIP","grade":3,"prices":[648,668]},{"name":"9x39mm SP5","grade":3,"prices":[524,584]},{"name":"玻纤柳叶箭矢","grade":3,"prices":[799,709]}]};
+
+const gradeColors = { 5: '#ffd740', 4: '#ce93d8', 3: '#4fc3f7' };
+let priceChart = null;
+let chartGradeFilter = 0;
+
+function buildChartDatasets(gradeFilter, keyword) {
+  const filtered = HISTORY.series.filter(s => {
+    if (gradeFilter > 0 && s.grade !== gradeFilter) return false;
+    if (keyword && !s.name.toLowerCase().includes(keyword.toLowerCase())) return false;
+    return true;
+  });
+  return filtered.map(s => ({
+    label: s.name,
+    data: s.prices,
+    borderColor: gradeColors[s.grade] || '#4fc3f7',
+    backgroundColor: gradeColors[s.grade] + '20',
+    borderWidth: 1.5,
+    pointRadius: 3,
+    pointHoverRadius: 5,
+    tension: 0.3,
+    spanGaps: true,
+    hidden: false
+  }));
+}
+
+function renderChart(gradeFilter, keyword) {
+  const canvas = document.getElementById('priceChart');
+  const emptyEl = document.getElementById('chartEmpty');
+
+  if (HISTORY.timePoints.length < 2) {
+    canvas.style.display = 'none';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  canvas.style.display = 'block';
+  emptyEl.style.display = 'none';
+
+  const datasets = buildChartDatasets(gradeFilter, keyword);
+
+  if (priceChart) {
+    priceChart.data.labels = HISTORY.timePoints;
+    priceChart.data.datasets = datasets;
+    priceChart.update();
+    return;
+  }
+
+  priceChart = new Chart(canvas, {
+    type: 'line',
+    data: { labels: HISTORY.timePoints, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: '#8899aa',
+            font: { size: 11 },
+            boxWidth: 12,
+            padding: 8,
+            usePointStyle: true
+          },
+          onClick: function(e, item, legend) {
+            const index = item.datasetIndex;
+            const ci = legend.chart;
+            if (ci.isDatasetVisible(index)) {
+              ci.hide(index);
+              item.hidden = true;
+            } else {
+              ci.show(index);
+              item.hidden = false;
+            }
+          }
+        },
+        tooltip: {
+          backgroundColor: '#1a2a3a',
+          borderColor: '#2a3a4a',
+          borderWidth: 1,
+          titleColor: '#fff',
+          bodyColor: '#e0e0e0',
+          padding: 10,
+          callbacks: {
+            label: function(ctx) {
+              const val = ctx.parsed.y;
+              return ctx.dataset.label + ': ' + (val != null ? val.toLocaleString() : '无数据');
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#1a2a3a' },
+          ticks: { color: '#8899aa', font: { size: 11 } }
+        },
+        y: {
+          grid: { color: '#1a2a3a' },
+          ticks: {
+            color: '#8899aa',
+            font: { size: 11 },
+            callback: function(val) { return val.toLocaleString(); }
+          }
+        }
+      }
+    }
+  });
+}
+
+// 等级筛选按钮
+document.querySelectorAll('.grade-btns button').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.grade-btns button').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    chartGradeFilter = parseInt(this.dataset.grade);
+    renderChart(chartGradeFilter, document.getElementById('chartSearch').value);
+  });
+});
+
+// 搜索框
+document.getElementById('chartSearch').addEventListener('input', function() {
+  renderChart(chartGradeFilter, this.value);
+});
+
+// 初始化图表
+renderChart(0, '');
+</script>
+</body>
+</html>
