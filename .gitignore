@@ -8,7 +8,7 @@ __mcp_debug.log
 __mcp_args_*.json
 __mcp_out_*.txt
 
-# Runtime generated (web_template/index.html is updated by skill at runtime)
+# Runtime generated (skill updates this at runtime)
 skills/fetch_ammo_prices/web_template/index.html
 
 # Python cache
