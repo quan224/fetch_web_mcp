@@ -8,8 +8,8 @@ __mcp_debug.log
 __mcp_args_*.json
 __mcp_out_*.txt
 
-# Generated website data will be updated on rebuild, but template is kept
-# skills/fetch_ammo_prices/web_template/index.html
+# Runtime generated (web_template/index.html is updated by skill at runtime)
+skills/fetch_ammo_prices/web_template/index.html
 
 # Python cache
 __pycache__/
